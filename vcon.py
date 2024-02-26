@@ -114,12 +114,33 @@ class Vcon:
                 dialog_urls.append(dialog.get("url"))
         return dialog_urls
     
-    def summary(self):
+    def get_summary(self):
+        # Get the summary from the analysis, if it exists
+        summary = None
         for analysis in self.analysis:
             if analysis.get("type") == "summary":
-                return analysis.get("body")
+                summary = analysis.get("body")
             
-    def duration(self):
+        return f"""
+        On {self.created_at}, there was a call involving {self.get_party_names()}.
+        The uniuqe ID for this call is {self.get_uuid()}.
+        The calls lasted {self.get_duration()} seconds, handled by {self.get_agent_mailto()}.
+        The team was {self.get_team_name()}.
+        You can listen to the call [here]({self.get_dialog_urls()}).
+
+        {summary}
+        """
+
+    def get_created_at(self):
+        return self.created_at
+
+    def get_updated_at(self):
+        return self.updated_at
+
+    def get_uuid(self):
+        return self.uuid
+     
+    def get_duration(self):
         duration = 0
         for dialog in self.dialog:
             duration += dialog.get("duration")

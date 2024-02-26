@@ -6,6 +6,7 @@ import streamlit as st
 import json
 import time
 import openai_lib
+from datetime import datetime
 
 from elastic_search import get_conversations
 
@@ -32,8 +33,17 @@ if "thread" not in st.session_state:
 # and provide a link to the vCon detail page using the vConID and CONV_DETAIL_URL
 st.sidebar.title("vConIDs")
 for vcon in st.session_state.vcons:
-    print("vcon: " + vcon.uuid)
-    st.sidebar.markdown(f"[{vcon.created_at}]({CONV_DETAIL_URL}\'{vcon.uuid}\')")
+    created_at = vcon.get_created_at()
+    # Convert the string to a timestamp
+    created_at_ts = datetime.fromisoformat(created_at).timestamp()
+
+    uuid = vcon.get_uuid()
+    # Make this a human readable date. If the created_at was today, show the time, otherwise show the date
+    if time.strftime("%Y-%m-%d", time.gmtime(created_at_ts)) == time.strftime("%Y-%m-%d"):
+        readable_date = time.strftime("%H:%M:%S", time.gmtime(created_at_ts))
+    else:
+        readable_date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(created_at_ts))
+    st.sidebar.markdown(f"[{readable_date}]({CONV_DETAIL_URL}\"{uuid}\")")
 
 # Get the thread
 thread = client.beta.threads.retrieve(thread_id=st.session_state.thread.id)
@@ -87,27 +97,36 @@ if prompt := st.chat_input("What is up?"):
                             q = arguments.get("q")
                             after = arguments.get("after")
                             before = arguments.get("before")
+                            details = arguments.get("details")
                             vcons = get_conversations(q, after, before)
 
                             # Submit the tool outputs
-                            json_vcons = [vcon.to_json() for vcon in vcons]
+                            if details:
+                                print("Giving details")
+                                json_vcons = [vcon.to_json() for vcon in vcons]
+                                output = json.dumps(json_vcons)
+                            else:
+                                print("Summarizing")
+                                summaries = [vcon.get_summary() for vcon in vcons]
+                                output = "\n\n".join(summaries)
+
                             client.beta.threads.runs.submit_tool_outputs(
                                 thread_id=thread.id,
                                 run_id=run.id,
                                 tool_outputs=[
                                     {
                                         "tool_call_id": tool_call_id,
-                                        "output": json.dumps(json_vcons)
+                                        "output": output
                                     }
                                 ]
                             )
 
                             # Add the vcons to the session state
-                            st.session_state.vcons.append(vcons)
+                            st.session_state.vcons.extend(vcons)
 
-                            # Add the vcons to the sidebar
-                            for vcon in vcons:
-                                st.sidebar.markdown(f"[{vcon.created_at}]({CONV_DETAIL_URL}\'{vcon.uuid}\')")
+                            # # Add the vcons to the sidebar
+                            # for vcon in vcons:
+                            #     st.sidebar.markdown(f"[{vcon.created_at}]({CONV_DETAIL_URL}\"{vcon.uuid}\")")
 
     # Print out the run step object
     steps = client.beta.threads.runs.steps.list(
