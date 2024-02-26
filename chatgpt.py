@@ -25,6 +25,15 @@ client, assistant = openai_lib.get_assistant()
 if "thread" not in st.session_state:
     st.session_state.thread = client.beta.threads.create()
     st.session_state.messages = []
+    st.session_state.vcons = []
+
+
+# In the sidebar, show the vConIDs that are used in this conversation, 
+# and provide a link to the vCon detail page using the vConID and CONV_DETAIL_URL
+st.sidebar.title("vConIDs")
+for vcon in st.session_state.vcons:
+    print("vcon: " + vcon.uuid)
+    st.sidebar.markdown(f"[{vcon.created_at}]({CONV_DETAIL_URL}\'{vcon.uuid}\')")
 
 # Get the thread
 thread = client.beta.threads.retrieve(thread_id=st.session_state.thread.id)
@@ -68,14 +77,18 @@ if prompt := st.chat_input("What is up?"):
             )
             if status.status == "requires_action":
                 if status.required_action.type == "submit_tool_outputs":
+                    print("Submit tool outputs")
                     for call in status.required_action.submit_tool_outputs.tool_calls:
                         if call.function.name == "get_conversation":
+                            print("Get conversation: " + call.id)
                             tool_call_id = call.id
                             arguments = json.loads(call.function.arguments)
+                            print("Arguments: " + str(arguments))
                             q = arguments.get("q")
                             after = arguments.get("after")
                             before = arguments.get("before")
                             vcons = get_conversations(q, after, before)
+
                             # Submit the tool outputs
                             json_vcons = [vcon.to_json() for vcon in vcons]
                             client.beta.threads.runs.submit_tool_outputs(
@@ -88,6 +101,14 @@ if prompt := st.chat_input("What is up?"):
                                     }
                                 ]
                             )
+
+                            # Add the vcons to the session state
+                            st.session_state.vcons.append(vcons)
+
+                            # Add the vcons to the sidebar
+                            for vcon in vcons:
+                                st.sidebar.markdown(f"[{vcon.created_at}]({CONV_DETAIL_URL}\'{vcon.uuid}\')")
+
     # Print out the run step object
     steps = client.beta.threads.runs.steps.list(
         thread_id=thread.id,
@@ -105,6 +126,3 @@ if prompt := st.chat_input("What is up?"):
             with st.chat_message("assistant"):
                 st.markdown(message_content.value)
             st.session_state.messages.append({"role": "assistant", "content": message_content.value})
-        else:
-            message_id = None
-            print("No message id found")
