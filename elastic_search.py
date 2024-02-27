@@ -46,11 +46,7 @@ def get_conversations(q=None, after=None, before=None):
     }
     print("Querying with body:" + json.dumps(body, indent=2))
     # Execute search and convert hits to Vcon objects
-    resp = client.search(index="vcon-index", body=body, size=num_hits, sort=sort_by, min_score=20.0)
-
-    # For debugging, show the JSON response 
-    pp_json(resp.body)
-
+    resp = client.search(index="vcon-index", body=body, size=num_hits, sort=sort_by)
     vcons = [Vcon.from_dict(hit["_source"]) for hit in resp['hits']['hits']]
 
     # Print the uuids of the vcons

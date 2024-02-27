@@ -63,6 +63,9 @@ class Vcon:
             elif party.get("tel"):
                 party_names.append(party.get("tel"))
         return party_names
+    
+    def get_party_string(self):
+        return ", ".join(self.get_party_names())
 
     def get_agent_mailto(self):
         for party in self.parties:

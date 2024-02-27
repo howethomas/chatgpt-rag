@@ -10,8 +10,8 @@ INSTRUCTIONS = st.secrets["INSTRUCTIONS"]
 def get_assistant():
     client = OpenAI(api_key=OPENAI_API_KEY)
     version  = 1.0
-    assistant_name = "Strolid GPT"
-    st.write(f"Version: {version}")
+    assistant_name = "Strolid GPT2"
+    st.write(f"{assistant_name}, version {version}")
 
     # Check to see if the assistant exists
     assistants = client.beta.assistants.list()
