@@ -31,20 +31,6 @@ if "thread" not in st.session_state:
 
 # In the sidebar, show the vConIDs that are used in this conversation, 
 # and provide a link to the vCon detail page using the vConID and CONV_DETAIL_URL
-st.sidebar.title("vConIDs")
-for vcon in st.session_state.vcons:
-    created_at = vcon.get_created_at()
-    # Convert the string to a timestamp
-    created_at_ts = datetime.fromisoformat(created_at).timestamp()
-
-    uuid = vcon.get_uuid()
-    # Make this a human readable date. If the created_at was today, show the time, otherwise show the date
-    if time.strftime("%Y-%m-%d", time.gmtime(created_at_ts)) == time.strftime("%Y-%m-%d"):
-        readable_date = time.strftime("%H:%M:%S", time.gmtime(created_at_ts))
-    else:
-        readable_date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(created_at_ts))
-    st.sidebar.markdown(f"[{readable_date}]({CONV_DETAIL_URL}\"{uuid}\")")
-
 # Get the thread
 thread = client.beta.threads.retrieve(thread_id=st.session_state.thread.id)
 
@@ -145,3 +131,10 @@ if prompt := st.chat_input("What is up?"):
             with st.chat_message("assistant"):
                 st.markdown(message_content.value)
             st.session_state.messages.append({"role": "assistant", "content": message_content.value})
+
+show_debug_info = st.checkbox("Show debug info")
+if show_debug_info:
+    st.write("Thread ID: " + thread.id)
+    st.write("Assistant ID: " + assistant.id)
+    st.write("Messages: " + str(st.session_state.messages))
+    st.write("vCons: " + str(st.session_state.vcons))
